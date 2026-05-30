@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\nicol\\MicroServicios\\toDoList-2026\\MiniApi\\MiniApi.csproj": {}
+    "C:\\Users\\nicol\\MicroServicios\\ecommerce-microservicios\\MiniApi\\MiniApi.csproj": {}
   },
   "projects": {
-    "C:\\Users\\nicol\\MicroServicios\\toDoList-2026\\MiniApi\\MiniApi.csproj": {
+    "C:\\Users\\nicol\\MicroServicios\\ecommerce-microservicios\\MiniApi\\MiniApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\nicol\\MicroServicios\\toDoList-2026\\MiniApi\\MiniApi.csproj",
+        "projectUniqueName": "C:\\Users\\nicol\\MicroServicios\\ecommerce-microservicios\\MiniApi\\MiniApi.csproj",
         "projectName": "MiniApi",
-        "projectPath": "C:\\Users\\nicol\\MicroServicios\\toDoList-2026\\MiniApi\\MiniApi.csproj",
+        "projectPath": "C:\\Users\\nicol\\MicroServicios\\ecommerce-microservicios\\MiniApi\\MiniApi.csproj",
         "packagesPath": "C:\\Users\\nicol\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\nicol\\MicroServicios\\toDoList-2026\\MiniApi\\obj\\",
+        "outputPath": "C:\\Users\\nicol\\MicroServicios\\ecommerce-microservicios\\MiniApi\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
