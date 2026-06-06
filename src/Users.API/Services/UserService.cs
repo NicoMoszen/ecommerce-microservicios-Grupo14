@@ -11,6 +11,7 @@ namespace Users.API.Services
 
         public UserResponse Registrar(RegisterRequest request)
         {
+            ValidarRegistro(request);
             var usuarioExistente = _usuarios.FirstOrDefault(u => u.Email == request.Email);
             if (usuarioExistente != null)
                 throw new EmailYaRegistradoException(request.Email);
@@ -67,6 +68,32 @@ namespace Users.API.Services
                 Activo = usuario.Activo,
                 FechaRegistro = usuario.FechaRegistro
             };
+        }
+        private void ValidarRegistro(RegisterRequest request)
+        {
+            List<string> errores = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(request.Nombre))
+                errores.Add("El nombre es obligatorio.");
+
+            if (string.IsNullOrWhiteSpace(request.Apellido))
+                errores.Add("El apellido es obligatorio.");
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+                errores.Add("El email es obligatorio.");
+            else if (!request.Email.Contains("@") || !request.Email.Contains("."))
+                errores.Add("El email no tiene un formato válido.");
+
+            if (string.IsNullOrWhiteSpace(request.Password))
+                errores.Add("La contraseña es obligatoria.");
+            else if (request.Password.Length < 8)
+                errores.Add("La contraseña debe tener al menos 8 caracteres.");
+
+            if (errores.Count > 0)
+            {
+                string mensaje = string.Join(" ", errores);
+                throw new DatosInvalidosException(mensaje);
+            }
         }
     }
 }
