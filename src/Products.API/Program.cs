@@ -1,5 +1,6 @@
 using Products.API.Models;
 using Products.API.Services;
+using Products.API.DTOs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,15 +34,33 @@ app.MapGet("/api/products/{id}", (Guid id, ProductService productService) =>
     return Results.Ok(product);
 });
 
-app.MapPost("/api/products", (Product product, ProductService productService) =>
+app.MapPost("/api/products", (CreateProductRequest request, ProductService productService) =>
 {
+    Product product = new Product
+    {
+        Nombre = request.Nombre,
+        Descripcion = request.Descripcion,
+        Precio = request.Precio,
+        Stock = request.Stock,
+        Categoria = request.Categoria
+    };
+
     Product createdProduct = productService.Create(product);
 
     return Results.Created($"/api/products/{createdProduct.Id}", createdProduct);
 });
 
-app.MapPut("/api/products/{id}", (Guid id, Product product, ProductService productService) =>
+app.MapPut("/api/products/{id}", (Guid id, UpdateProductRequest request, ProductService productService) =>
 {
+    Product product = new Product
+    {
+        Nombre = request.Nombre,
+        Descripcion = request.Descripcion,
+        Precio = request.Precio,
+        Stock = request.Stock,
+        Categoria = request.Categoria
+    };
+
     Product? updatedProduct = productService.Update(id, product);
 
     if (updatedProduct is null)
