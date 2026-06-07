@@ -1,12 +1,14 @@
+using Products.API.Models;
+using Products.API.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton<ProductService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -14,28 +16,52 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapGet("/api/products", (ProductService productService) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    return Results.Ok(productService.GetAll());
+});
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/api/products/{id}", (Guid id, ProductService productService) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    Product? product = productService.GetById(id);
+
+    if (product is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(product);
+});
+
+app.MapPost("/api/products", (Product product, ProductService productService) =>
+{
+    Product createdProduct = productService.Create(product);
+
+    return Results.Created($"/api/products/{createdProduct.Id}", createdProduct);
+});
+
+app.MapPut("/api/products/{id}", (Guid id, Product product, ProductService productService) =>
+{
+    Product? updatedProduct = productService.Update(id, product);
+
+    if (updatedProduct is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(updatedProduct);
+});
+
+app.MapDelete("/api/products/{id}", (Guid id, ProductService productService) =>
+{
+    bool deleted = productService.Delete(id);
+
+    if (!deleted)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.NoContent();
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
