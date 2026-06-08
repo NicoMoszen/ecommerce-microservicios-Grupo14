@@ -3,8 +3,13 @@ using Products.API.Services;
 using Products.API.DTOs;
 using Products.API.Exceptions;
 using Products.API.ExceptionHandlers;
+using ECommerce.Shared.Observability;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddAppLogging("Products.API");
 
 builder.Services.AddOpenApi();
 
@@ -27,6 +32,8 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+app.UseAppRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {
