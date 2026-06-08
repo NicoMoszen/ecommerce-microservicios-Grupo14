@@ -1,25 +1,46 @@
 using Products.API.Models;
 using Products.API.Services;
 using Products.API.DTOs;
+using Products.API.Exceptions;
+using Products.API.ExceptionHandlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen();
+
 builder.Services.AddSingleton<ProductService>();
 
+builder.Services.AddExceptionHandler<ProductExceptionHandler>();
+
+builder.Services.AddExceptionHandler<NotFoundExceptionHandler>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+builder.Services.AddProblemDetails();
+
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/products", (ProductService productService) =>
+app.MapGet("/api/products", (string? categoria, string? nombre, ProductService productService) =>
 {
-    return Results.Ok(productService.GetAll());
+    return Results.Ok(productService.GetFiltered(categoria, nombre));
 });
 
 app.MapGet("/api/products/{id}", (Guid id, ProductService productService) =>
@@ -28,7 +49,9 @@ app.MapGet("/api/products/{id}", (Guid id, ProductService productService) =>
 
     if (product is null)
     {
-        return Results.NotFound();
+        throw new NotFoundException(
+            "PRD-001",
+            "Producto no encontrado.");
     }
 
     return Results.Ok(product);
@@ -65,7 +88,9 @@ app.MapPut("/api/products/{id}", (Guid id, UpdateProductRequest request, Product
 
     if (updatedProduct is null)
     {
-        return Results.NotFound();
+        throw new NotFoundException(
+            "PRD-001",
+            "Producto no encontrado.");
     }
 
     return Results.Ok(updatedProduct);
@@ -77,10 +102,17 @@ app.MapDelete("/api/products/{id}", (Guid id, ProductService productService) =>
 
     if (!deleted)
     {
-        return Results.NotFound();
+        throw new NotFoundException(
+            "PRD-001",
+            "Producto no encontrado.");
     }
 
     return Results.NoContent();
 });
+
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live");
+app.MapHealthChecks("/health/ready");
+
 
 app.Run();

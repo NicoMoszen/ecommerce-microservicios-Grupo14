@@ -1,4 +1,6 @@
 ﻿using Products.API.Models;
+using Products.API.Exceptions;
+
 
 namespace Products.API.Services
 {
@@ -20,7 +22,22 @@ namespace Products.API.Services
         {
             if (IsInvalidProductData(product.Nombre, product.Descripcion, product.Precio, product.Stock, product.Categoria))
             {
-                throw new ArgumentException("PRD-002");
+                throw new ProductException(
+                 "PRD-002",
+                 "Los datos del producto son inválidos.",
+                 400);
+            }
+
+            bool duplicatedProduct = _products.Any(existingProduct =>
+                existingProduct.Nombre.Equals(product.Nombre, StringComparison.OrdinalIgnoreCase)
+                && existingProduct.Categoria.Equals(product.Categoria, StringComparison.OrdinalIgnoreCase));
+
+            if (duplicatedProduct)
+            {
+                throw new ProductException(
+                    "PRD-003",
+                    "Ya existe un producto con ese nombre en la categoría.",
+                    409);
             }
 
             product.Id = Guid.NewGuid();
@@ -40,7 +57,10 @@ namespace Products.API.Services
                 updatedProduct.Stock,
                 updatedProduct.Categoria))
             {
-                throw new ArgumentException("PRD-002");
+                throw new ProductException(
+                 "PRD-002",
+                 "Los datos del producto son inválidos.",
+                 400);
             }
 
             Product? existingProduct = GetById(id);
@@ -81,6 +101,25 @@ namespace Products.API.Services
                 || precio <= 0
                 || stock < 0
                 || string.IsNullOrWhiteSpace(categoria);
+        }
+
+        public List<Product> GetFiltered(string? categoria, string? nombre)
+        {
+            IEnumerable<Product> query = _products;
+
+            if (!string.IsNullOrWhiteSpace(categoria))
+            {
+                query = query.Where(product =>
+                    product.Categoria.Equals(categoria, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                query = query.Where(product =>
+                    product.Nombre.Contains(nombre, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query.ToList();
         }
     }
 }
