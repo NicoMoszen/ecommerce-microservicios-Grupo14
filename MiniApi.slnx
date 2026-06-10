@@ -7,5 +7,4 @@
     <Project Path="src/Products.API/Products.API.csproj" />
     <Project Path="src/Users.API/Users.API.csproj" />
   </Folder>
-  <Project Path="MiniApi/MiniApi.csproj" />
 </Solution>
