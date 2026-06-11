@@ -1,21 +1,27 @@
 ﻿using Products.API.Models;
 using Products.API.Exceptions;
+using Products.API.Data;
 
 
 namespace Products.API.Services
 {
     public class ProductService
     {
-        private readonly List<Product> _products = new();
+        private readonly ProductRepository _productRepository;
+
+        public ProductService(ProductRepository productRepository)
+        {
+            _productRepository = productRepository;
+        }
 
         public List<Product> GetAll()
         {
-            return _products;
+            return _productRepository.GetAll();
         }
 
         public Product? GetById(Guid id)
         {
-            return _products.FirstOrDefault(product => product.Id == id);
+            return _productRepository.GetById(id);
         }
 
         public Product Create(Product product)
@@ -28,9 +34,9 @@ namespace Products.API.Services
                  400);
             }
 
-            bool duplicatedProduct = _products.Any(existingProduct =>
-                existingProduct.Nombre.Equals(product.Nombre, StringComparison.OrdinalIgnoreCase)
-                && existingProduct.Categoria.Equals(product.Categoria, StringComparison.OrdinalIgnoreCase));
+            Product? existingProduct = _productRepository.GetByNameAndCategory(product.Nombre, product.Categoria);
+
+            bool duplicatedProduct = existingProduct is not null;
 
             if (duplicatedProduct)
             {
@@ -43,9 +49,7 @@ namespace Products.API.Services
             product.Id = Guid.NewGuid();
             product.FechaCreacion = DateTime.UtcNow;
 
-            _products.Add(product);
-
-            return product;
+            return _productRepository.Create(product);
         }
 
         public Product? Update(Guid id, Product updatedProduct)
@@ -58,39 +62,17 @@ namespace Products.API.Services
                 updatedProduct.Categoria))
             {
                 throw new ProductException(
-                 "PRD-002",
-                 "Los datos del producto son inválidos.",
-                 400);
+                    "PRD-002",
+                    "Los datos del producto son inválidos.",
+                    400);
             }
 
-            Product? existingProduct = GetById(id);
-
-            if (existingProduct is null)
-            {
-                return null;
-            }
-
-            existingProduct.Nombre = updatedProduct.Nombre;
-            existingProduct.Descripcion = updatedProduct.Descripcion;
-            existingProduct.Precio = updatedProduct.Precio;
-            existingProduct.Stock = updatedProduct.Stock;
-            existingProduct.Categoria = updatedProduct.Categoria;
-
-            return existingProduct;
+            return _productRepository.Update(id, updatedProduct);
         }
 
         public bool Delete(Guid id)
         {
-            Product? existingProduct = GetById(id);
-
-            if (existingProduct is null)
-            {
-                return false;
-            }
-
-            _products.Remove(existingProduct);
-
-            return true;
+            return _productRepository.Delete(id);
         }
 
         private static bool IsInvalidProductData(string nombre, string? descripcion, decimal precio, int stock, string categoria)
@@ -105,7 +87,7 @@ namespace Products.API.Services
 
         public List<Product> GetFiltered(string? categoria, string? nombre)
         {
-            IEnumerable<Product> query = _products;
+            IEnumerable<Product> query = _productRepository.GetAll();
 
             if (!string.IsNullOrWhiteSpace(categoria))
             {

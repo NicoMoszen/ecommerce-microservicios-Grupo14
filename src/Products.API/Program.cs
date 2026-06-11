@@ -4,6 +4,7 @@ using Products.API.DTOs;
 using Products.API.Exceptions;
 using Products.API.ExceptionHandlers;
 using ECommerce.Shared.Observability;
+using Products.API.Data;
 
 
 
@@ -16,6 +17,10 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddSingleton<DatabaseInitializer>();
+
+builder.Services.AddSingleton<ProductRepository>();
 
 builder.Services.AddSingleton<ProductService>();
 
@@ -34,6 +39,13 @@ var app = builder.Build();
 app.UseExceptionHandler();
 
 app.UseAppRequestLogging();
+
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider
+        .GetRequiredService<DatabaseInitializer>()
+        .Initialize();
+}
 
 if (app.Environment.IsDevelopment())
 {
