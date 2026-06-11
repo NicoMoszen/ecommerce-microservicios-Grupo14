@@ -11,9 +11,10 @@ namespace Users.API.Controllers
     {
         private readonly UserService _userService;
 
-        public UsersController()
+        
+        public UsersController(UserService userService)
         {
-            _userService = new UserService();
+            _userService = userService;
         }
 
         /// <summary>

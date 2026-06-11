@@ -1,3 +1,4 @@
+using Users.API.Data;
 using Users.API.DTOs;
 using Users.API.Exceptions;
 using Users.API.Models;
@@ -6,13 +7,18 @@ namespace Users.API.Services
 {
     public class UserService
     {
-        // NICO: reemplazar por conexión a base de datos
-        private static List<User> _usuarios = new List<User>();
+        private readonly UserRepository _userRepository;
+
+        public UserService(UserRepository userRepository)
+        {
+            _userRepository = userRepository;
+        }
 
         public UserResponse Registrar(RegisterRequest request)
         {
             ValidarRegistro(request);
-            var usuarioExistente = _usuarios.FirstOrDefault(u => u.Email == request.Email);
+
+            var usuarioExistente = _userRepository.BuscarPorEmail(request.Email);
             if (usuarioExistente != null)
                 throw new EmailYaRegistradoException(request.Email);
 
@@ -24,7 +30,7 @@ namespace Users.API.Services
                 PasswordHash = request.Password
             };
 
-            _usuarios.Add(nuevoUsuario);
+            _userRepository.Crear(nuevoUsuario);
 
             return new UserResponse
             {
@@ -39,7 +45,7 @@ namespace Users.API.Services
 
         public UserResponse Login(LoginRequest request)
         {
-            var usuario = _usuarios.FirstOrDefault(u => u.Email == request.Email);
+            var usuario = _userRepository.BuscarPorEmail(request.Email);
             if (usuario == null)
                 throw new CredencialesInvalidasException();
 
@@ -52,12 +58,15 @@ namespace Users.API.Services
                 if (usuario.IntentosFallidos >= 3)
                 {
                     usuario.Activo = false;
+                    _userRepository.Actualizar(usuario);
                     throw new UsuarioBloqueadoIntentosFallidosException();
                 }
+                _userRepository.Actualizar(usuario);
                 throw new CredencialesInvalidasException();
             }
 
             usuario.IntentosFallidos = 0;
+            _userRepository.Actualizar(usuario);
 
             return new UserResponse
             {
@@ -69,6 +78,7 @@ namespace Users.API.Services
                 FechaRegistro = usuario.FechaRegistro
             };
         }
+
         private void ValidarRegistro(RegisterRequest request)
         {
             List<string> errores = new List<string>();
