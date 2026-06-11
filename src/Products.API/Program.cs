@@ -1,18 +1,15 @@
-using Products.API.Models;
-using Products.API.Services;
-using Products.API.DTOs;
-using Products.API.Exceptions;
-using Products.API.ExceptionHandlers;
 using ECommerce.Shared.Observability;
 using Products.API.Data;
-
-
+using Products.API.ExceptionHandlers;
+using Products.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddAppLogging("Products.API");
 
 builder.Services.AddOpenApi();
+
+builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -36,10 +33,6 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
-
-app.UseAppRequestLogging();
-
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider
@@ -47,91 +40,27 @@ using (var scope = app.Services.CreateScope())
         .Initialize();
 }
 
+app.UseExceptionHandler();
+
+app.UseAppRequestLogging();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 
     app.UseSwagger();
+
     app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/products", (string? categoria, string? nombre, ProductService productService) =>
-{
-    return Results.Ok(productService.GetFiltered(categoria, nombre));
-});
-
-app.MapGet("/api/products/{id}", (Guid id, ProductService productService) =>
-{
-    Product? product = productService.GetById(id);
-
-    if (product is null)
-    {
-        throw new NotFoundException(
-            "PRD-001",
-            "Producto no encontrado.");
-    }
-
-    return Results.Ok(product);
-});
-
-app.MapPost("/api/products", (CreateProductRequest request, ProductService productService) =>
-{
-    Product product = new Product
-    {
-        Nombre = request.Nombre,
-        Descripcion = request.Descripcion,
-        Precio = request.Precio,
-        Stock = request.Stock,
-        Categoria = request.Categoria
-    };
-
-    Product createdProduct = productService.Create(product);
-
-    return Results.Created($"/api/products/{createdProduct.Id}", createdProduct);
-});
-
-app.MapPut("/api/products/{id}", (Guid id, UpdateProductRequest request, ProductService productService) =>
-{
-    Product product = new Product
-    {
-        Nombre = request.Nombre,
-        Descripcion = request.Descripcion,
-        Precio = request.Precio,
-        Stock = request.Stock,
-        Categoria = request.Categoria
-    };
-
-    Product? updatedProduct = productService.Update(id, product);
-
-    if (updatedProduct is null)
-    {
-        throw new NotFoundException(
-            "PRD-001",
-            "Producto no encontrado.");
-    }
-
-    return Results.Ok(updatedProduct);
-});
-
-app.MapDelete("/api/products/{id}", (Guid id, ProductService productService) =>
-{
-    bool deleted = productService.Delete(id);
-
-    if (!deleted)
-    {
-        throw new NotFoundException(
-            "PRD-001",
-            "Producto no encontrado.");
-    }
-
-    return Results.NoContent();
-});
+app.MapControllers();
 
 app.MapHealthChecks("/health");
-app.MapHealthChecks("/health/live");
-app.MapHealthChecks("/health/ready");
 
+app.MapHealthChecks("/health/live");
+
+app.MapHealthChecks("/health/ready");
 
 app.Run();
