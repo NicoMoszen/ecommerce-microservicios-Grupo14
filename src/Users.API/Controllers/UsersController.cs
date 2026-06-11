@@ -11,7 +11,6 @@ namespace Users.API.Controllers
     {
         private readonly UserService _userService;
 
-        
         public UsersController(UserService userService)
         {
             _userService = userService;
@@ -32,7 +31,7 @@ namespace Users.API.Controllers
         }
 
         /// <summary>
-        /// Autenticar un usuario con email y contraseña
+        /// Autenticar un usuario con email y password
         /// </summary>
         [HttpPost("login")]
         [ProducesResponseType(typeof(UserResponse), 200)]
@@ -43,6 +42,19 @@ namespace Users.API.Controllers
         public IActionResult Login([FromBody] LoginRequest request)
         {
             var resultado = _userService.Login(request);
+            return Ok(resultado);
+        }
+
+        /// <summary>
+        /// Obtener usuario por ID
+        /// </summary>
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(UserResponse), 200)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(500)]
+        public IActionResult ObtenerPorId(Guid id)
+        {
+            var resultado = _userService.ObtenerPorId(id);
             return Ok(resultado);
         }
     }
