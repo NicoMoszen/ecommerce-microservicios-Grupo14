@@ -41,6 +41,28 @@ namespace Users.API.Data
             };
         }
 
+        public User? BuscarPorId(Guid id)
+        {
+            using var connection = CreateConnection();
+            var result = connection.QueryFirstOrDefault<dynamic>(
+                "SELECT id, nombre, apellido, email, password_hash, activo, intentos_fallidos, fecha_registro FROM usuarios WHERE id = @Id",
+                new { Id = id.ToString() });
+
+            if (result == null) return null;
+
+            return new User
+            {
+                Id = Guid.Parse((string)result.id),
+                Nombre = (string)result.nombre,
+                Apellido = (string)result.apellido,
+                Email = (string)result.email,
+                PasswordHash = (string)result.password_hash,
+                Activo = (long)result.activo == 1,
+                IntentosFallidos = (int)(long)result.intentos_fallidos,
+                FechaRegistro = DateTime.Parse((string)result.fecha_registro)
+            };
+        }
+
         public User Crear(User user)
         {
             using var connection = CreateConnection();

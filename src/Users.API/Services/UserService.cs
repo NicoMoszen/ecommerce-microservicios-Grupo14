@@ -79,6 +79,23 @@ namespace Users.API.Services
             };
         }
 
+        public UserResponse ObtenerPorId(Guid id)
+        {
+            var usuario = _userRepository.BuscarPorId(id);
+            if (usuario == null)
+                throw new NotFoundException($"El usuario con id '{id}' no fue encontrado.");
+
+            return new UserResponse
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Apellido = usuario.Apellido,
+                Email = usuario.Email,
+                Activo = usuario.Activo,
+                FechaRegistro = usuario.FechaRegistro
+            };
+        }
+
         private void ValidarRegistro(RegisterRequest request)
         {
             List<string> errores = new List<string>();
