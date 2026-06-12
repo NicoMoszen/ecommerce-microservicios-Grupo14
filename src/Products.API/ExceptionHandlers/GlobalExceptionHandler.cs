@@ -1,21 +1,39 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
+﻿using ECommerce.Shared.Observability;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Products.API.ExceptionHandlers
 {
     public class GlobalExceptionHandler : IExceptionHandler
     {
+        private readonly ILogger<GlobalExceptionHandler> _logger;
+
+        public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+        {
+            _logger = logger;
+        }
+
         public async ValueTask<bool> TryHandleAsync(
             HttpContext context,
             Exception exception,
             CancellationToken cancellationToken)
         {
-            context.Response.StatusCode = 500;
+            _logger.LogError(exception, "Error inesperado al procesar {Path}", context.Request.Path);
 
-            await context.Response.WriteAsJsonAsync(new
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
             {
-                status = 500,
-                errorCode = "PRD-005",
-                errorMessage = "Error interno al procesar el producto."
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
+                Title = "Internal Server Error",
+                Status = 500,
+                Detail = "Ocurrió un error inesperado.",
+                Instance = context.Request.Path,
+                Extensions = new Dictionary<string, object?>
+                {
+                    ["errorCode"] = "PRD-005",
+                    ["errorMessage"] = "Error interno al procesar el producto.",
+                    ["correlationId"] = context.Items[CorrelationIdMiddleware.HeaderName]
+                }
             }, cancellationToken);
 
             return true;

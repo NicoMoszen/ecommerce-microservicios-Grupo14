@@ -27,7 +27,6 @@ public class OrderRepository : IOrderRepository
             ORDER BY o.fecha_creacion DESC
             """, new { UsuarioId = usuarioId?.ToString() });
 
-        // Cada orden aparece en N filas (una por item); se agrupan por id.
         return rows
             .GroupBy(r => (string)r.id)
             .Select(g => MapOrder(g.ToList()))
@@ -97,9 +96,19 @@ public class OrderRepository : IOrderRepository
             """, new { Id = id.ToString(), Estado = estado, FechaActualizacion = fechaActualizacion });
     }
 
-    // Convierte las filas (orden + items joineados) en una entidad Order.
-    // SQLite guarda los decimales como REAL (double), por eso la
-    // conversión explícita con Convert.ToDecimal.
+    public async Task<int> CountActiveByProductAsync(Guid productId)
+    {
+        using var conn = CreateConnection();
+
+        return await conn.ExecuteScalarAsync<int>("""
+            SELECT COUNT(DISTINCT o.id)
+            FROM orders o
+            INNER JOIN order_items i ON o.id = i.order_id
+            WHERE i.producto_id = @ProductId
+              AND o.estado IN ('Pendiente', 'Confirmada')
+            """, new { ProductId = productId.ToString() });
+    }
+
     private static Order MapOrder(List<dynamic> rows)
     {
         var first = rows[0];

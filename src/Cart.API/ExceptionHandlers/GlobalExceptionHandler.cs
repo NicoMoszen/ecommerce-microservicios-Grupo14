@@ -1,3 +1,4 @@
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +15,8 @@ public class GlobalExceptionHandler : IExceptionHandler
 
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
-        _logger.LogError(exception, "Unhandled exception");
+
+        _logger.LogError(exception, "Error inesperado al procesar {Path}", context.Request.Path);
 
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await context.Response.WriteAsJsonAsync(new ProblemDetails
@@ -27,7 +29,8 @@ public class GlobalExceptionHandler : IExceptionHandler
             Extensions = new Dictionary<string, object?>
             {
                 ["errorCode"] = "CRT-005",
-                ["errorMessage"] = "Error interno al procesar el carrito."
+                ["errorMessage"] = "Error interno al procesar el carrito.",
+                ["correlationId"] = context.Items[CorrelationIdMiddleware.HeaderName]
             }
         }, ct);
 

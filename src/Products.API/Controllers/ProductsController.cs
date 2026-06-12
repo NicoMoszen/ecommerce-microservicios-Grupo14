@@ -99,9 +99,9 @@ namespace Products.API.Controllers
         [ProducesResponseType(404)]
         [ProducesResponseType(409)]
         [ProducesResponseType(500)]
-        public IActionResult Delete(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            bool deleted = _productService.Delete(id);
+            bool deleted = await _productService.DeleteAsync(id);
 
             if (!deleted)
             {

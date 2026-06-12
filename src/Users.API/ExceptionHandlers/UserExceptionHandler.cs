@@ -1,3 +1,4 @@
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Users.API.Exceptions;
@@ -6,6 +7,13 @@ namespace Users.API.ExceptionHandlers
 {
     public class UserExceptionHandler : IExceptionHandler
     {
+        private readonly ILogger<UserExceptionHandler> _logger;
+
+        public UserExceptionHandler(ILogger<UserExceptionHandler> logger)
+        {
+            _logger = logger;
+        }
+
         public async ValueTask<bool> TryHandleAsync(
             HttpContext context,
             Exception exception,
@@ -23,6 +31,12 @@ namespace Users.API.ExceptionHandlers
                 _ => (500, "Internal Server Error", "USR-006", "Error interno al procesar el usuario.")
             };
 
+
+            if (status >= 500)
+                _logger.LogError(exception, "{ErrorCode} en {Path}", errorCode, context.Request.Path);
+            else
+                _logger.LogWarning("{ErrorCode} en {Path}: {Mensaje}", errorCode, context.Request.Path, errorMessage);
+
             context.Response.StatusCode = status;
 
             var problema = new ProblemDetails
@@ -36,6 +50,7 @@ namespace Users.API.ExceptionHandlers
 
             problema.Extensions["errorCode"] = errorCode;
             problema.Extensions["errorMessage"] = errorMessage;
+            problema.Extensions["correlationId"] = context.Items[CorrelationIdMiddleware.HeaderName];
 
             await context.Response.WriteAsJsonAsync(problema, cancellationToken);
             return true;

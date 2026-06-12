@@ -37,6 +37,11 @@ public class OrderService : IOrderService
         return _repository.GetAllAsync(usuarioId);
     }
 
+    public Task<int> CountActiveByProductAsync(Guid productId)
+    {
+        return _repository.CountActiveByProductAsync(productId);
+    }
+
     public async Task<Order> GetByIdAsync(Guid id)
     {
         var order = await _repository.GetByIdAsync(id);

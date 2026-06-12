@@ -1,3 +1,4 @@
+using Cart.API.Clients;
 using Cart.API.DTOs;
 using Cart.API.Exceptions;
 using Cart.API.Models;
@@ -9,10 +10,12 @@ namespace Cart.API.Services;
 public class CartService : ICartService
 {
     private readonly ICartRepository _repository;
+    private readonly IProductsApiClient _productsApi;
 
-    public CartService(ICartRepository repository)
+    public CartService(ICartRepository repository, IProductsApiClient productsApi)
     {
         _repository = repository;
+        _productsApi = productsApi;
     }
 
     public async Task<CartResponse> GetCartAsync(Guid userId)
@@ -26,6 +29,9 @@ public class CartService : ICartService
     {
         if (request.Cantidad <= 0) throw new CartCantidadInvalidaException();
 
+        var producto = await _productsApi.GetProductAsync(request.ProductoId);
+        if (producto is null) throw new CartProductNotFoundException();
+
         var cart = await _repository.GetByUserIdAsync(userId) ?? new CartEntity
         {
             UsuarioId = userId,
@@ -33,6 +39,12 @@ public class CartService : ICartService
         };
 
         var item = cart.Items.FirstOrDefault(i => i.ProductoId == request.ProductoId);
+        var cantidadResultante = (item?.Cantidad ?? 0) + request.Cantidad;
+
+        if (producto.Stock < cantidadResultante)
+            throw new CartStockInsuficienteException(
+                producto.Nombre, producto.Stock, cantidadResultante);
+
         if (item is null)
             cart.Items.Add(new CartItem { ProductoId = request.ProductoId, Cantidad = request.Cantidad });
         else
@@ -52,6 +64,13 @@ public class CartService : ICartService
 
         var item = cart.Items.FirstOrDefault(i => i.ProductoId == productId);
         if (item is null) throw new CartProductNotFoundException();
+
+        var producto = await _productsApi.GetProductAsync(productId);
+        if (producto is null) throw new CartProductNotFoundException();
+
+        if (producto.Stock < request.Cantidad)
+            throw new CartStockInsuficienteException(
+                producto.Nombre, producto.Stock, request.Cantidad);
 
         item.Cantidad = request.Cantidad;
         cart.Touch();
