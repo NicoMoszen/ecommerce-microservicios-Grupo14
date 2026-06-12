@@ -1,41 +1,126 @@
+using System.Reflection;
+using ECommerce.Shared.Observability;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
+using Orders.API.Clients;
+using Orders.API.Database;
+using Orders.API.ExceptionHandlers;
+using Orders.API.HealthChecks;
+using Orders.API.Repositories;
+using Orders.API.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.AddAppLogging("Orders.API");
+
+builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
+});
+
+builder.Services.AddSingleton<DatabaseInitializer>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<CorrelationIdDelegatingHandler>();
+
+builder.Services.AddHttpClient<IUsersApiClient, UsersApiClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:UsersApi"]!);
+    client.Timeout = TimeSpan.FromSeconds(5);
+}).AddHttpMessageHandler<CorrelationIdDelegatingHandler>();
+
+builder.Services.AddHttpClient<IProductsApiClient, ProductsApiClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:ProductsApi"]!);
+    client.Timeout = TimeSpan.FromSeconds(5);
+}).AddHttpMessageHandler<CorrelationIdDelegatingHandler>();
+
+builder.Services.AddHealthChecks()
+    .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready"]);
+
+builder.Services.AddExceptionHandler<OrderNotFoundExceptionHandler>();
+builder.Services.AddExceptionHandler<OrderDatosInvalidosExceptionHandler>();
+builder.Services.AddExceptionHandler<OrderUsuarioNotFoundExceptionHandler>();
+builder.Services.AddExceptionHandler<OrderProductoNotFoundExceptionHandler>();
+builder.Services.AddExceptionHandler<OrderStockInsuficienteExceptionHandler>();
+builder.Services.AddExceptionHandler<OrderEstadoInvalidoExceptionHandler>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var result = new ObjectResult(new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+            Title = "Bad Request",
+            Status = 400,
+            Detail = "Los datos enviados son inválidos.",
+            Instance = context.HttpContext.Request.Path,
+            Extensions = new Dictionary<string, object?>
+            {
+                ["errorCode"] = "ORD-002",
+                ["errorMessage"] = "Los datos de la orden son inválidos.",
+                ["correlationId"] = context.HttpContext.Items[CorrelationIdMiddleware.HeaderName]
+            }
+        })
+        {
+            StatusCode = 400
+        };
+
+        return result;
+    };
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+using (var scope = app.Services.CreateScope())
+    scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().Initialize();
 
-app.UseHttpsRedirection();
+app.UseMiddleware<CorrelationIdMiddleware>();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.UseExceptionHandler();
 
-app.MapGet("/weatherforecast", () =>
+app.UseAppRequestLogging();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.MapControllers();
+
+app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = WriteHealthResponse });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = WriteHealthResponse
+});
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false, 
+    ResponseWriter = WriteHealthResponse
+});
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+static Task WriteHealthResponse(HttpContext context, Microsoft.Extensions.Diagnostics.HealthChecks.HealthReport report)
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    context.Response.ContentType = "application/json";
+    return context.Response.WriteAsJsonAsync(new
+    {
+        estado = report.Status.ToString(),
+        duracionMs = report.TotalDuration.TotalMilliseconds,
+        checks = report.Entries.Select(e => new
+        {
+            nombre = e.Key,
+            estado = e.Value.Status.ToString(),
+            descripcion = e.Value.Description
+        })
+    });
 }
