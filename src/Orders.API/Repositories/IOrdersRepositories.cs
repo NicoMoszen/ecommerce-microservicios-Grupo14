@@ -4,7 +4,6 @@ namespace Orders.API.Repositories;
 
 public interface IOrderRepository
 {
-    // usuarioId null = listar todas; con valor = filtro ?usuarioId=
     Task<List<Order>> GetAllAsync(Guid? usuarioId);
 
     Task<Order?> GetByIdAsync(Guid id);
@@ -12,4 +11,6 @@ public interface IOrderRepository
     Task CreateAsync(Order order);
 
     Task UpdateStatusAsync(Guid id, string estado, DateTime fechaActualizacion);
-}   
+
+    Task<int> CountActiveByProductAsync(Guid productId);
+}

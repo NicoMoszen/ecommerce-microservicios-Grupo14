@@ -1,14 +1,25 @@
+using Cart.API.Exceptions;
+using ECommerce.Shared.Observability;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Cart.API.Exceptions;
 
 namespace Cart.API.ExceptionHandlers;
 
 public class CartStockInsuficienteExceptionHandler : IExceptionHandler
 {
+    private readonly ILogger<CartStockInsuficienteExceptionHandler> _logger;
+
+    public CartStockInsuficienteExceptionHandler(ILogger<CartStockInsuficienteExceptionHandler> logger)
+    {
+        _logger = logger;
+    }
+
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
         if (exception is not CartStockInsuficienteException) return false;
+
+        _logger.LogWarning("{ErrorCode} en {Path}: {Mensaje}",
+            "CRT-003", context.Request.Path, exception.Message);
 
         context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
         await context.Response.WriteAsJsonAsync(new ProblemDetails
@@ -21,7 +32,8 @@ public class CartStockInsuficienteExceptionHandler : IExceptionHandler
             Extensions = new Dictionary<string, object?>
             {
                 ["errorCode"] = "CRT-003",
-                ["errorMessage"] = exception.Message
+                ["errorMessage"] = exception.Message,
+                ["correlationId"] = context.Items[CorrelationIdMiddleware.HeaderName]
             }
         }, ct);
 

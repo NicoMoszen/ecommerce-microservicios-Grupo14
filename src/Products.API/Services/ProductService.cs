@@ -1,17 +1,19 @@
 ﻿using Products.API.Models;
 using Products.API.Exceptions;
 using Products.API.Data;
-
+using Products.API.Clients;
 
 namespace Products.API.Services
 {
     public class ProductService
     {
         private readonly ProductRepository _productRepository;
+        private readonly IOrdersApiClient _ordersApi;
 
-        public ProductService(ProductRepository productRepository)
+        public ProductService(ProductRepository productRepository, IOrdersApiClient ordersApi)
         {
             _productRepository = productRepository;
+            _ordersApi = ordersApi;
         }
 
         public List<Product> GetAll()
@@ -70,8 +72,21 @@ namespace Products.API.Services
             return _productRepository.Update(id, updatedProduct);
         }
 
-        public bool Delete(Guid id)
+        public async Task<bool> DeleteAsync(Guid id)
         {
+            var product = _productRepository.GetById(id);
+            if (product is null)
+                return false;
+
+            var ordenesActivas = await _ordersApi.GetActiveOrdersCountAsync(id);
+            if (ordenesActivas > 0)
+            {
+                throw new ProductException(
+                    "PRD-004",
+                    $"No se puede eliminar el producto porque tiene {ordenesActivas} orden(es) activa(s) que lo referencian.",
+                    409);
+            }
+
             return _productRepository.Delete(id);
         }
 

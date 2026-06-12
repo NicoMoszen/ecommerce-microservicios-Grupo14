@@ -12,4 +12,6 @@ public interface IOrderService
     Task<Order> CreateAsync(CreateOrderRequest request);
 
     Task<Order> UpdateStatusAsync(Guid id, UpdateOrderStatusRequest request);
+
+    Task<int> CountActiveByProductAsync(Guid productId);
 }
