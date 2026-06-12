@@ -1,15 +1,6 @@
 # E-Commerce Microservicios - Grupo 14
 
-## Requisitos
-
-- .NET 10 SDK
-- Visual Studio 2026 Community
-
-## Ejecución
-
-Clonar el repositorio y abrir `MiniApi.slnx`. Configurar múltiples proyectos de inicio y ejecutar con F5, o alternativamente ejecutar `dotnet run` en cada carpeta de microservicio.
-
-Users.API debe iniciarse antes que Notifications.API ya que esta última realiza llamadas HTTP a Users para validar la existencia del usuario destinatario.
+Desarrollado con .NET 10.
 
 ## Puertos
 
@@ -49,10 +40,20 @@ Users.API debe iniciarse antes que Notifications.API ya que esta última realiza
 - POST /api/notifications/send
 - GET /api/notifications/{userId}
 
+## Comunicación entre servicios
+
+Los microservicios se comunican entre sí mediante HTTP para validar datos en tiempo real. Orders.API consulta a Users.API y Products.API al crear una orden. Cart.API consulta a Products.API para verificar stock. Notifications.API consulta a Users.API para verificar el usuario destinatario. Products.API consulta a Orders.API antes de eliminar un producto para verificar que no tenga órdenes activas.
+
+**Orden de arranque recomendado:** Users.API y Products.API primero, luego el resto.
+
+## Infraestructura compartida
+
+Todos los microservicios utilizan ECommerce.Shared, una librería interna que centraliza Serilog, el middleware de Correlation ID y las extensiones de logging.
+
 ## Base de datos
 
-Cada microservicio utiliza una base de datos SQLite independiente que se inicializa automáticamente al arrancar la aplicación.
+Cada microservicio utiliza una base de datos SQLite independiente que se inicializa automáticamente al arrancar.
 
 ## Health Checks
 
-Todos los microservicios exponen /health, /health/ready y /health/live.
+Todos los microservicios exponen /health, /health/ready y /health/live con respuesta JSON que incluye el estado de la base de datos.
