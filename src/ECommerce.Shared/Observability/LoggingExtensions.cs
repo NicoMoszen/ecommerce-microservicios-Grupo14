@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
 using Serilog;
+using Serilog.Formatting.Json;
 
 namespace ECommerce.Shared.Observability
 {
@@ -9,10 +9,15 @@ namespace ECommerce.Shared.Observability
         public static void AddAppLogging(this WebApplicationBuilder builder, string applicationName)
         {
             Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .Enrich.FromLogContext()                 
                 .Enrich.WithProperty("Application", applicationName)
-                .WriteTo.Console()
+                .WriteTo.Console(outputTemplate:
+                    "[{Timestamp:HH:mm:ss} {Level:u3}] [{Application}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}")
+                
                 .WriteTo.File(
-                    "logs/log-.txt",
+                    formatter: new JsonFormatter(),
+                    path: "logs/log-.json",
                     rollingInterval: RollingInterval.Day)
                 .CreateLogger();
 
