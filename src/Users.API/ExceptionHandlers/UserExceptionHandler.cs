@@ -18,6 +18,7 @@ namespace Users.API.ExceptionHandlers
                 CredencialesInvalidasException ex => (401, "Unauthorized", ex.ErrorCode, ex.Message),
                 UsuarioBloqueadoIntentosFallidosException ex => (403, "Forbidden", ex.ErrorCode, ex.Message),
                 UsuarioBloqueadoFraudeException ex => (403, "Forbidden", ex.ErrorCode, ex.Message),
+                NotFoundException ex => (404, "Not Found", ex.ErrorCode, ex.Message),
                 ErrorInternoException ex => (500, "Internal Server Error", ex.ErrorCode, ex.Message),
                 _ => (500, "Internal Server Error", "USR-006", "Error interno al procesar el usuario.")
             };
